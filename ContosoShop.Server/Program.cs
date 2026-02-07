@@ -86,9 +86,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorClient", policy =>
     {
-        policy.WithOrigins("https://localhost:5002") // Explicit whitelist, no wildcards
+        policy.WithOrigins("https://localhost:7202", "http://localhost:5266") // Explicit whitelist for actual server ports
               .WithMethods("GET", "POST") // Only required methods
-              .WithHeaders("Content-Type", "Authorization", "X-CSRF-TOKEN"); // Only required headers
+              .WithHeaders("Content-Type", "Authorization", "X-CSRF-TOKEN") // Only required headers
+              .AllowCredentials(); // Allow credentials for authentication
     });
 });
 
