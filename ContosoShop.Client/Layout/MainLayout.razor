@@ -1,0 +1,40 @@
+﻿@inherits LayoutComponentBase
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4" style="padding-left: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <h3 style="margin: 0;">ContosoShop Support Portal</h3>
+                <AuthorizeView>
+                    <Authorized>
+                        <span style="font-size: 1.5rem; font-weight: 500; color: #333;">@userName</span>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private string userName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userName = user.Identity.Name ?? "User";
+        }
+    }
+}

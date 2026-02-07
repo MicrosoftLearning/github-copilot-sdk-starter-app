@@ -1,0 +1,39 @@
+@using ContosoShop.Shared.Models
+
+@* Reusable component for displaying order status badges with consistent styling *@
+
+@if (Status.HasValue)
+{
+    <span class="badge @GetStatusBadgeClass()">
+        @GetStatusText()
+    </span>
+}
+
+@code {
+    [Parameter]
+    public OrderStatus? Status { get; set; }
+
+    private string GetStatusBadgeClass()
+    {
+        return Status switch
+        {
+            OrderStatus.Processing => "bg-primary",
+            OrderStatus.Shipped => "bg-warning text-dark",
+            OrderStatus.Delivered => "bg-success",
+            OrderStatus.Returned => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private string GetStatusText()
+    {
+        return Status switch
+        {
+            OrderStatus.Processing => "Processing",
+            OrderStatus.Shipped => "Shipped",
+            OrderStatus.Delivered => "Delivered",
+            OrderStatus.Returned => "Returned",
+            _ => "Unknown"
+        };
+    }
+}

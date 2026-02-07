@@ -1,0 +1,94 @@
+@page "/orders"
+@using ContosoShop.Shared.Models
+@using ContosoShop.Client.Services
+@inject IOrderService OrderService
+@inject NavigationManager Navigation
+
+<PageTitle>My Orders - ContosoShop</PageTitle>
+
+<h1>My Orders</h1>
+
+@if (isLoading)
+{
+    <div class="alert alert-info">
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Loading orders...
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @errorMessage
+        <p class="mb-0 mt-2">Please try refreshing the page or contact support if the problem persists.</p>
+    </div>
+}
+else if (orders == null || !orders.Any())
+{
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">No orders found</h4>
+        <p class="mb-0">You don't have any orders yet. Start shopping to see your order history here!</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Order Number</th>
+                    <th>Order Date</th>
+                    <th>Status</th>
+                    <th>Total</th>
+                    <th>Items</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in orders)
+                {
+                    <tr style="cursor: pointer;" @onclick="() => ViewOrderDetails(order.Id)">
+                        <td><strong>#@order.Id</strong></td>
+                        <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                        <td>
+                            <OrderStatusBadge Status="@order.Status" />
+                        </td>
+                        <td>@order.TotalAmount.ToString("C")</td>
+                        <td>@order.Items.Count item(s)</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" @onclick="() => ViewOrderDetails(order.Id)" @onclick:stopPropagation="true">
+                                View Details
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private List<Order>? orders;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            orders = await OrderService.GetOrdersAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load orders: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewOrderDetails(int orderId)
+    {
+        Navigation.NavigateTo($"/orders/{orderId}");
+    }
+}

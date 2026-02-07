@@ -1,0 +1,476 @@
+@page "/orders/{id:int}"
+@using ContosoShop.Shared.Models
+@using ContosoShop.Shared.DTOs
+@using ContosoShop.Client.Services
+@inject IOrderService OrderService
+@inject NavigationManager Navigation
+
+<PageTitle>Order Details - ContosoShop</PageTitle>
+
+@if (isLoading)
+{
+    <div class="alert alert-info">
+        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+        Loading order details...
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <strong>Error:</strong> @errorMessage
+        <p class="mb-2 mt-2">
+            @if (isNotFound)
+            {
+                <text>The order you're looking for could not be found.</text>
+            }
+            else
+            {
+                <text>Please try again or contact support if the problem persists.</text>
+            }
+        </p>
+        <button class="btn btn-primary" @onclick="NavigateToOrders">Back to Orders</button>
+    </div>
+}
+else if (order != null)
+{
+    <div class="mb-3">
+        <button class="btn btn-outline-secondary" @onclick="NavigateToOrders">
+            <i class="bi bi-arrow-left"></i> Back to Orders
+        </button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h2 class="mb-0">Order #@order.Id</h2>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="mb-2">
+                        <strong>Order Date:</strong> @order.OrderDate.ToString("MMMM dd, yyyy 'at' h:mm tt")
+                    </p>
+                    <p class="mb-2">
+                        <strong>Status:</strong>
+                        <OrderStatusBadge Status="@order.Status" />
+                    </p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="mb-2">
+                        <strong>Total Amount:</strong>
+                        <span class="h4 text-primary">@order.TotalAmount.ToString("C")</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Timeline -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">Order Timeline</h4>
+        </div>
+        <div class="card-body">
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-marker bg-success"></div>
+                    <div class="timeline-content">
+                        <h6 class="mb-1">Order Placed</h6>
+                        <p class="text-muted mb-0">@order.OrderDate.ToString("MMMM dd, yyyy 'at' h:mm tt")</p>
+                    </div>
+                </div>
+
+                @if (order.ShipDate.HasValue)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Order Shipped</h6>
+                            <p class="text-muted mb-0">@order.ShipDate.Value.ToString("MMMM dd, yyyy 'at' h:mm tt")</p>
+                        </div>
+                    </div>
+                }
+                else if (order.Status != OrderStatus.Processing && order.Status != OrderStatus.Returned)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Preparing Shipment</h6>
+                            <p class="text-muted mb-0">Pending</p>
+                        </div>
+                    </div>
+                }
+
+                @if (order.DeliveryDate.HasValue)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-success"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Order Delivered</h6>
+                            <p class="text-muted mb-0">@order.DeliveryDate.Value.ToString("MMMM dd, yyyy 'at' h:mm tt")</p>
+                        </div>
+                    </div>
+                }
+                else if (order.Status == OrderStatus.Shipped)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-warning"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">In Transit</h6>
+                            <p class="text-muted mb-0">Expected soon</p>
+                        </div>
+                    </div>
+                }
+
+                @if (order.Status == OrderStatus.Returned)
+                {
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Order Returned</h6>
+                            <p class="text-muted mb-0">Return processed</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Order Items</h4>
+            @if (!isReturning && !returnSuccess && (order.Status == OrderStatus.Delivered || (order.Status == OrderStatus.Returned && order.Items.Any(i => i.RemainingQuantity > 0))))
+            {
+                @if (!isSelectingItems)
+                {
+                    <button class="btn btn-warning btn-sm" @onclick="StartItemSelection">
+                        <i class="bi bi-arrow-return-left"></i> Return Items
+                    </button>
+                }
+                else
+                {
+                    <div>
+                        <button class="btn btn-secondary btn-sm me-2" @onclick="CancelItemSelection">Cancel</button>
+                        <button class="btn btn-warning btn-sm" @onclick="SubmitReturn" disabled="@(!selectedItems.Any())">
+                            @if (isReturning)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                                <text>Processing...</text>
+                            }
+                            else
+                            {
+                                <text>Submit Return (@selectedItems.Count item@(selectedItems.Count != 1 ? "s" : ""))</text>
+                            }
+                        </button>
+                    </div>
+                }
+            }
+        </div>
+        <div class="card-body">
+            @if (returnSuccess)
+            {
+                <div class="alert alert-success" role="alert">
+                    <h5 class="alert-heading">Return Processed Successfully!</h5>
+                    <p>Your return has been processed. A refund of @returnedAmount.ToString("C") will be credited to your original payment method within 3 business days following our receipt of the item(s).</p>
+                    <p class="mb-0">You will receive a confirmation email shortly.</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(returnErrorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    <strong>Error processing return:</strong> @returnErrorMessage
+                </div>
+            }
+
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            @if (isSelectingItems)
+                            {
+                                <th style="width: 50px;">Return</th>
+                            }
+                            <th>Product</th>
+                            <th class="text-center">Quantity</th>
+                            @if (isSelectingItems)
+                            {
+                                <th class="text-center">Return Qty</th>
+                            }
+                            @if (order.Items.Any(i => i.ReturnedQuantity > 0))
+                            {
+                                <th class="text-center">Returned</th>
+                            }
+                            <th class="text-end">Price</th>
+                            <th class="text-end">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in order.Items)
+                        {
+                            var isFullyReturned = item.IsFullyReturned;
+                            var isPartiallyReturned = item.IsPartiallyReturned;
+                            var isItemSelected = selectedItems.ContainsKey(item.Id);
+                            var returnQty = isItemSelected ? selectedItems[item.Id] : 0;
+
+                            <tr class="@(isFullyReturned ? "table-secondary" : isPartiallyReturned ? "table-warning" : "")">
+                                @if (isSelectingItems)
+                                {
+                                    <td class="text-center">
+                                        @if (item.RemainingQuantity > 0)
+                                        {
+                                            <input type="checkbox" class="form-check-input" 
+                                                   checked="@isItemSelected"
+                                                   @onchange="@(e => ToggleItemSelection(item.Id, (bool)e.Value!))" />
+                                        }
+                                    </td>
+                                }
+                                <td>
+                                    @item.ProductName
+                                    @if (isFullyReturned)
+                                    {
+                                        <span class="badge bg-secondary ms-2">Returned</span>
+                                    }
+                                    else if (isPartiallyReturned)
+                                    {
+                                        <span class="badge bg-warning text-dark ms-2">Returned @item.ReturnedQuantity of @item.Quantity</span>
+                                    }
+                                </td>
+                                <td class="text-center">@item.Quantity</td>
+                                @if (isSelectingItems)
+                                {
+                                    <td class="text-center">
+                                        @if (item.RemainingQuantity > 0 && isItemSelected)
+                                        {
+                                            <input type="number" class="form-control form-control-sm" style="width: 80px; display: inline-block;"
+                                                   min="1" max="@item.RemainingQuantity" value="@returnQty"
+                                                   @onchange="@(e => UpdateReturnQuantity(item.Id, int.Parse(e.Value!.ToString()!)))" />
+                                            <small class="text-muted d-block">of @item.RemainingQuantity available</small>
+                                        }
+                                    </td>
+                                }
+                                @if (order.Items.Any(i => i.ReturnedQuantity > 0))
+                                {
+                                    <td class="text-center">
+                                        @if (item.ReturnedQuantity > 0)
+                                        {
+                                            <span class="badge bg-secondary">@item.ReturnedQuantity</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                    </td>
+                                }
+                                <td class="text-end">@item.Price.ToString("C")</td>
+                                <td class="text-end">@item.Subtotal.ToString("C")</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="@GetTotalColspan()" class="text-end"><strong>Total:</strong></td>
+                            <td class="text-end"><strong>@order.TotalAmount.ToString("C")</strong></td>
+                        </tr>
+                        @if (isSelectingItems && selectedItems.Any())
+                        {
+                            <tr class="table-warning">
+                                <td colspan="@GetTotalColspan()" class="text-end"><strong>Return Amount:</strong></td>
+                                <td class="text-end"><strong>@CalculateReturnAmount().ToString("C")</strong></td>
+                            </tr>
+                        }
+                    </tfoot>
+                </table>
+            </div>
+
+            @if (order.Status == OrderStatus.Returned)
+            {
+                var allItemsReturned = order.Items.All(i => i.IsFullyReturned);
+                var someItemsReturned = order.Items.Any(i => i.ReturnedQuantity > 0);
+
+                @if (allItemsReturned)
+                {
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle"></i> All items in this order have been returned. You'll be refunded when we receive the returned items.
+                    </div>
+                }
+                else if (someItemsReturned)
+                {
+                    <div class="alert alert-info mt-3 mb-0">
+                        <i class="bi bi-info-circle"></i> Some items in this order have been returned. You'll be refunded when we receive the returned items.
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Order? order;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private bool isNotFound = false;
+    private bool isReturning = false;
+    private bool returnSuccess = false;
+    private string? returnErrorMessage;
+    private bool isSelectingItems = false;
+    private Dictionary<int, int> selectedItems = new(); // OrderItemId -> Quantity
+    private decimal returnedAmount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            order = await OrderService.GetOrderByIdAsync(Id);
+
+            if (order == null)
+            {
+                isNotFound = true;
+                errorMessage = "Order not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load order details: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void StartItemSelection()
+    {
+        isSelectingItems = true;
+        selectedItems.Clear();
+        returnErrorMessage = null;
+    }
+
+    private void CancelItemSelection()
+    {
+        isSelectingItems = false;
+        selectedItems.Clear();
+    }
+
+    private void ToggleItemSelection(int orderItemId, bool isChecked)
+    {
+        if (order == null) return;
+
+        var item = order.Items.FirstOrDefault(i => i.Id == orderItemId);
+        if (item == null) return;
+
+        if (isChecked)
+        {
+            // Default to returning remaining quantity
+            selectedItems[orderItemId] = item.RemainingQuantity;
+        }
+        else
+        {
+            selectedItems.Remove(orderItemId);
+        }
+    }
+
+    private void UpdateReturnQuantity(int orderItemId, int quantity)
+    {
+        if (order == null) return;
+
+        var item = order.Items.FirstOrDefault(i => i.Id == orderItemId);
+        if (item == null) return;
+
+        // Validate quantity
+        if (quantity > 0 && quantity <= item.RemainingQuantity)
+        {
+            selectedItems[orderItemId] = quantity;
+        }
+    }
+
+    private decimal CalculateReturnAmount()
+    {
+        if (order == null) return 0;
+
+        return selectedItems.Sum(kvp =>
+        {
+            var item = order.Items.FirstOrDefault(i => i.Id == kvp.Key);
+            return item != null ? item.Price * kvp.Value : 0;
+        });
+    }
+
+    private int GetTotalColspan()
+    {
+        var baseColumns = 3; // Product, Quantity/Price/Subtotal
+        if (isSelectingItems) baseColumns += 2; // Return checkbox + Return Qty columns
+        if (order != null && order.Items.Any(i => i.ReturnedQuantity > 0)) baseColumns++; // Returned column
+        return baseColumns;
+    }
+
+    private async Task SubmitReturn()
+    {
+        if (order == null || !selectedItems.Any()) return;
+
+        isReturning = true;
+        returnErrorMessage = null;
+
+        try
+        {
+            var returnItems = selectedItems.Select(kvp => new ReturnItem
+            {
+                OrderItemId = kvp.Key,
+                Quantity = kvp.Value,
+                Reason = "Customer has chosen to return item"
+            }).ToList();
+
+            var success = await OrderService.ReturnOrderItemsAsync(order.Id, returnItems);
+
+            if (success)
+            {
+                returnSuccess = true;
+                returnedAmount = CalculateReturnAmount();
+
+                // Update local order state
+                foreach (var kvp in selectedItems)
+                {
+                    var item = order.Items.FirstOrDefault(i => i.Id == kvp.Key);
+                    if (item != null)
+                    {
+                        item.ReturnedQuantity += kvp.Value;
+                    }
+                }
+
+                // Update order status
+                var allReturned = order.Items.All(i => i.IsFullyReturned);
+                if (allReturned)
+                {
+                    order.Status = OrderStatus.Returned;
+                }
+                else if (order.Items.Any(i => i.ReturnedQuantity > 0))
+                {
+                    order.Status = OrderStatus.Returned;
+                }
+
+                // Reset selection state
+                isSelectingItems = false;
+                selectedItems.Clear();
+            }
+            else
+            {
+                returnErrorMessage = "Failed to process return. Please ensure items are eligible for return.";
+            }
+        }
+        catch (Exception ex)
+        {
+            returnErrorMessage = $"An error occurred while processing your return: {ex.Message}";
+        }
+        finally
+        {
+            isReturning = false;
+        }
+    }
+
+    private void NavigateToOrders()
+    {
+        Navigation.NavigateTo("/orders");
+    }
+}

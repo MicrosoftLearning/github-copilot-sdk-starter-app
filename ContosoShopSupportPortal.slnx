@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/ContosoShop.Server.Tests/ContosoShop.Server.Tests.csproj" />
+  </Folder>
+  <Project Path="ContosoShop.Client/ContosoShop.Client.csproj" />
+  <Project Path="ContosoShop.Server/ContosoShop.Server.csproj" />
+  <Project Path="ContosoShop.Shared/ContosoShop.Shared.csproj" />
+</Solution>

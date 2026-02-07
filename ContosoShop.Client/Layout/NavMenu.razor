@@ -1,0 +1,79 @@
+﻿<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">ContosoShop</a>
+        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+    </div>
+</div>
+
+<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
+    <nav class="flex-column" style="display: flex; height: 100%; justify-content: space-between;">
+        <AuthorizeView>
+            <Authorized>
+                <div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                            <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="orders">
+                            <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Orders
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <NavLink class="nav-link" href="support">
+                            <span class="bi bi-chat-square-text-fill-nav-menu" aria-hidden="true"></span> Contact Support
+                        </NavLink>
+                    </div>
+                    <div class="nav-item px-3">
+                        <button @onclick="HandleLogout">
+                            <span class="bi bi-box-arrow-right" aria-hidden="true"></span> Logout
+                        </button>
+                    </div>
+                </div>
+                <div class="nav-item px-3" style="margin-top: auto;">
+                    <NavLink class="nav-link" href="inventory">
+                        <span class="bi bi-box-seam-nav-menu" aria-hidden="true"></span> View Inventory
+                    </NavLink>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-box-arrow-in-right" aria-hidden="true"></span> Login
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>
+
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+@code {
+    private bool collapseNavMenu = true;
+
+    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            await Http.PostAsync("api/auth/logout", null);
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch
+        {
+            // If logout fails, still redirect to login
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+    }
+}
