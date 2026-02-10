@@ -183,12 +183,12 @@ public static class DbInitializer
             };
 
             // Set ship/delivery dates based on status
-            if (status == OrderStatus.Shipped || status == OrderStatus.Delivered || status == OrderStatus.Returned)
+            if (status == OrderStatus.Shipped || status == OrderStatus.Delivered || status == OrderStatus.Returned || status == OrderStatus.PartialReturn)
             {
                 order.ShipDate = orderDate.AddDays(random.Next(1, 3));
             }
 
-            if (status == OrderStatus.Delivered || status == OrderStatus.Returned)
+            if (status == OrderStatus.Delivered || status == OrderStatus.Returned || status == OrderStatus.PartialReturn)
             {
                 order.DeliveryDate = orderDate.AddDays(random.Next(5, 10));
             }

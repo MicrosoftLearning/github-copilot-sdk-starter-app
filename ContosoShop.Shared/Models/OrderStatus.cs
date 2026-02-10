@@ -23,5 +23,10 @@ public enum OrderStatus
     /// <summary>
     /// Customer initiated return, refund processed
     /// </summary>
-    Returned = 3
+    Returned = 3,
+
+    /// <summary>
+    /// Some items returned, others still with customer
+    /// </summary>
+    PartialReturn = 4
 }

@@ -89,7 +89,7 @@ else if (order != null)
                         </div>
                     </div>
                 }
-                else if (order.Status != OrderStatus.Processing && order.Status != OrderStatus.Returned)
+                else if (order.Status != OrderStatus.Processing && order.Status != OrderStatus.Returned && order.Status != OrderStatus.PartialReturn)
                 {
                     <div class="timeline-item">
                         <div class="timeline-marker bg-warning"></div>
@@ -121,13 +121,14 @@ else if (order != null)
                     </div>
                 }
 
-                @if (order.Status == OrderStatus.Returned)
+                @if (order.Status == OrderStatus.Returned || order.Status == OrderStatus.PartialReturn)
                 {
                     <div class="timeline-item">
-                        <div class="timeline-marker bg-secondary"></div>
+                        <div class="timeline-marker @(order.Status == OrderStatus.Returned ? "bg-secondary" : "bg-info")">
+                        </div>
                         <div class="timeline-content">
-                            <h6 class="mb-1">Order Returned</h6>
-                            <p class="text-muted mb-0">Return processed</p>
+                            <h6 class="mb-1">@(order.Status == OrderStatus.Returned ? "Order Returned" : "Partial Return")</h6>
+                            <p class="text-muted mb-0">@(order.Status == OrderStatus.Returned ? "Return processed" : "Some items returned")</p>
                         </div>
                     </div>
                 }
@@ -139,7 +140,7 @@ else if (order != null)
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4 class="mb-0">Order Items</h4>
-            @if (!isReturning && !returnSuccess && (order.Status == OrderStatus.Delivered || (order.Status == OrderStatus.Returned && order.Items.Any(i => i.RemainingQuantity > 0))))
+            @if (!isReturning && !returnSuccess && (order.Status == OrderStatus.Delivered || order.Status == OrderStatus.PartialReturn || (order.Status == OrderStatus.Returned && order.Items.Any(i => i.RemainingQuantity > 0))))
             {
                 @if (!isSelectingItems)
                 {
@@ -283,7 +284,7 @@ else if (order != null)
                 </table>
             </div>
 
-            @if (order.Status == OrderStatus.Returned)
+            @if (order.Status == OrderStatus.Returned || order.Status == OrderStatus.PartialReturn)
             {
                 var allItemsReturned = order.Items.All(i => i.IsFullyReturned);
                 var someItemsReturned = order.Items.Any(i => i.ReturnedQuantity > 0);
@@ -297,7 +298,7 @@ else if (order != null)
                 else if (someItemsReturned)
                 {
                     <div class="alert alert-info mt-3 mb-0">
-                        <i class="bi bi-info-circle"></i> Some items in this order have been returned. You'll be refunded when we receive the returned items.
+                        <i class="bi bi-info-circle"></i> Some items in this order have been returned. You can still return the remaining items. You'll be refunded when we receive the returned items.
                     </div>
                 }
             }
@@ -447,7 +448,7 @@ else if (order != null)
                 }
                 else if (order.Items.Any(i => i.ReturnedQuantity > 0))
                 {
-                    order.Status = OrderStatus.Returned;
+                    order.Status = OrderStatus.PartialReturn;
                 }
 
                 // Reset selection state

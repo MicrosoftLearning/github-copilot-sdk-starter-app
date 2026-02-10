@@ -216,8 +216,8 @@ public class OrdersController : ControllerBase
             return Forbid();
         }
 
-        // T088s - Validate order status is Delivered or Returned (for partial returns)
-        if (order.Status != OrderStatus.Delivered && order.Status != OrderStatus.Returned)
+        // T088s - Validate order status is Delivered, Returned, or PartialReturn (for additional returns)
+        if (order.Status != OrderStatus.Delivered && order.Status != OrderStatus.Returned && order.Status != OrderStatus.PartialReturn)
         {
             return BadRequest(new
             {

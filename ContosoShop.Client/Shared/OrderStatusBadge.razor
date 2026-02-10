@@ -21,6 +21,7 @@
             OrderStatus.Shipped => "bg-warning text-dark",
             OrderStatus.Delivered => "bg-success",
             OrderStatus.Returned => "bg-secondary",
+            OrderStatus.PartialReturn => "bg-info text-dark",
             _ => "bg-secondary"
         };
     }
@@ -33,6 +34,7 @@
             OrderStatus.Shipped => "Shipped",
             OrderStatus.Delivered => "Delivered",
             OrderStatus.Returned => "Returned",
+            OrderStatus.PartialReturn => "Partial Return",
             _ => "Unknown"
         };
     }

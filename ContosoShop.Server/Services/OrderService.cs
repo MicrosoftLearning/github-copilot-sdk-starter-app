@@ -39,8 +39,8 @@ public class OrderService : IOrderService
             return false;
         }
 
-        // Validate order is eligible for return (must be Delivered or partially Returned)
-        if (order.Status != OrderStatus.Delivered && order.Status != OrderStatus.Returned)
+        // Validate order is eligible for return (must be Delivered, Returned, or PartialReturn)
+        if (order.Status != OrderStatus.Delivered && order.Status != OrderStatus.Returned && order.Status != OrderStatus.PartialReturn)
         {
             return false;
         }
@@ -121,8 +121,8 @@ public class OrderService : IOrderService
         }
         else if (anyItemReturned)
         {
-            // Still Returned status, but with partial returns
-            return OrderStatus.Returned;
+            // Partial return: some items returned, others still with customer
+            return OrderStatus.PartialReturn;
         }
         else
         {
