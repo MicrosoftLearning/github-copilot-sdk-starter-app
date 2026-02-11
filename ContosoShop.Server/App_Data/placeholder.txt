@@ -1,0 +1,1 @@
+Placeholder for the SQLite database that's generated when the app runs the first time.
